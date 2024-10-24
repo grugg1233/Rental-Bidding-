@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rental Bidding Platform</title>
+    <link rel="stylesheet" href="corporate_style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+        <div class="container-fluid">
+            <a href="/" class="navbar-brand">Rental Bidding Platform</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/create-listing">Create Listing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/contact">Contact Us</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero-section text-center text-white">
+        <div class="hero-overlay d-flex align-items-center justify-content-center">
+            <div>
+                <h1 class="display-4">Find Your Dream Rental Property Today!</h1>
+                <p class="lead">Bid for the best properties at the best prices.</p>
+                <a href="#listings-container" class="btn btn-primary btn-lg mt-3">Explore Listings</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <div class="text-center mb-4">
+            <h2 class="text-secondary fw-bold">Available Listings</h2>
+            <p id="status" class="text-info">Connecting to WebSocket server...</p>
+        </div>
+        <div class="row" id="listings-container">
+            <!-- Listings will be populated here via JavaScript -->
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Rental Bidding Platform. All Rights Reserved.</p>
+    </footer>
+
+    <script src="post_listing.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listing Details</title>
+    <link rel="stylesheet" href="corporate_style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+        <div class="container-fluid">
+            <a href="/" class="navbar-brand">Rental Bidding Platform</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/create-listing">Create Listing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/contact">Contact Us</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Listing Details Section -->
+    <div class="container my-5">
+        <h2 class="text-center mb-4" id="listing-title">Listing Title</h2>
+        <div class="listing-details">
+            <img id="listing-img" class="img-fluid mb-4" src="" alt="Listing Image" style="width: 100%; height: auto; border-radius: 15px;">
+            <p><strong>Description:</strong> <span id="listing-description"></span></p>
+            <p><strong>Starting Bid:</strong> $<span id="listing-startingBid"></span></p>
+            <p><strong>Current Bid:</strong> $<span id="listing-currentBid"></span></p>
+            <p><strong>Address:</strong> <span id="listing-address"></span></p>
+            <button class="btn btn-primary" id="place-bid-btn">Place a Bid</button>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Rental Bidding Platform. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Establish WebSocket connection using the same port as the server
+            const socket = new WebSocket('ws://localhost:8080');
+
+            // Get listing details from local storage
+            const listing = JSON.parse(localStorage.getItem('selectedListing'));
+
+            if (listing) {
+                document.getElementById('listing-title').textContent = listing.propertyName;
+                document.getElementById('listing-img').src = listing.imgUrl;
+                document.getElementById('listing-description').textContent = listing.description;
+                document.getElementById('listing-startingBid').textContent = listing.startingBid;
+                document.getElementById('listing-currentBid').textContent = listing.currentBid;
+                document.getElementById('listing-address').textContent = `${listing.streetAddress}, ${listing.city}, ${listing.state}, ${listing.postalCode}`;
+
+                document.getElementById('place-bid-btn').addEventListener('click', () => {
+                    const bidAmount = prompt('Enter your bid amount:');
+                    if (bidAmount && !isNaN(bidAmount) && parseFloat(bidAmount) > listing.currentBid) {
+                        // Update the current bid locally
+                        listing.currentBid = parseFloat(bidAmount);
+                        document.getElementById('listing-currentBid').textContent = listing.currentBid;
+                        localStorage.setItem('selectedListing', JSON.stringify(listing));
+
+                        // Send new bid to WebSocket server
+                        socket.send(JSON.stringify({
+                            type: 'newBid',
+                            propertyName: listing.propertyName,
+                            bidAmount: listing.currentBid
+                        }));
+
+                        alert('Bid placed successfully!');
+                    } else {
+                        alert('Please enter a valid bid amount greater than the current bid.');
+                    }
+                });
+            } else {
+                alert('No listing found. Please go back and select a valid listing.');
+            }
+
+            socket.onopen = () => {
+                console.log('WebSocket connection established.');
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'newBid' && data.propertyName === listing.propertyName) {
+                    // Update the current bid in the detailed view if this listing received a new bid
+                    listing.currentBid = data.bidAmount;
+                    document.getElementById('listing-currentBid').textContent = listing.currentBid;
+                    localStorage.setItem('selectedListing', JSON.stringify(listing));
+                }
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                alert('Failed to connect to WebSocket server.');
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket connection closed.');
+            };
+        });
+    </script>
+</body>
+</html>
