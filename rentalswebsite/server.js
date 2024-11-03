@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 
 const app = express();
-const PORT = 8080;  // HTTP port for polling
+const PORT = process.env.PORT || 80;  // Use cPanel-assigned port or default to 80
 
 // In-memory array to store listings
 const listings = [];
@@ -20,7 +20,7 @@ app.get('/create-listing', (req, res) => {
     res.sendFile(path.join(__dirname, 'post_listing.html'));
 });
 
-// New endpoint to handle polling requests for updates
+// Endpoint to handle polling requests for updates
 app.get('/get-updates', (req, res) => {
     res.json(recentUpdates);
     recentUpdates = [];  // Clear updates after sending
@@ -63,5 +63,5 @@ app.post('/add-listing', express.json(), (req, res) => {
 
 // Start HTTP server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
