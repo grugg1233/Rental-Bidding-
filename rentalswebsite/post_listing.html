@@ -22,9 +22,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/create-listing">Create Listing</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/contact">Contact Us</a>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -67,51 +64,6 @@
         <p>&copy; 2024 Rental Bidding Platform. All Rights Reserved.</p>
     </footer>
 
-    <script>
-        // JavaScript to handle form submission
-        document.getElementById('listing-form').addEventListener('submit', function (event) {
-            event.preventDefault();
-
-            // Get form data
-            const propertyName = document.getElementById('propertyName').value;
-            const description = document.getElementById('description').value;
-            const startingBid = parseFloat(document.getElementById('startingBid').value);
-            const imgUrl = document.getElementById('imgUrl').value;
-            const streetAddress = document.getElementById('streetAddress').value;
-            const city = document.getElementById('city').value;
-            const state = document.getElementById('state').value;
-            const postalCode = document.getElementById('postalCode').value;
-
-            // Create listing data object
-            const listingData = {
-                propertyName,
-                description,
-                startingBid,
-                imgUrl,
-                streetAddress,
-                city,
-                state,
-                postalCode,
-                currentBid: startingBid
-            };
-
-            // Send data to WebSocket server
-            const socket = new WebSocket('ws://localhost:8080');
-            socket.onopen = () => {
-                socket.send(JSON.stringify({
-                    type: 'newListing',
-                    listing: listingData
-                }));
-                alert('Listing created successfully!');
-                // Redirect to home page after successful submission
-                window.location.href = '/';
-            };
-
-            socket.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                alert('Failed to create listing. Please try again later.');
-            };
-        });
-    </script>
+    <script src="post_listing.js"></script>
 </body>
 </html>

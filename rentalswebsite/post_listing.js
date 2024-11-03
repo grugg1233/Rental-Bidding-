@@ -1,8 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
     const listingsContainer = document.getElementById('listings-container');
-
-    // Polling interval in milliseconds (e.g., 5000 ms = 5 seconds)
+    const statusElement = document.getElementById('status');
     const POLLING_INTERVAL = 5000;
+
+    // Function to fetch and display initial listings on page load
+    async function loadInitialListings() {
+        try {
+            const response = await fetch('/listings');
+            const data = await response.json();
+            data.forEach(addListing);
+            statusElement.textContent = 'Connected to server';
+        } catch (error) {
+            console.error('Error loading listings:', error);
+            statusElement.textContent = 'Failed to load listings.';
+        }
+    }
 
     // Function to poll the server for updates every few seconds
     function pollServerForUpdates() {
@@ -11,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/get-updates');  // AJAX call to check for updates
                 const data = await response.json();
 
-                // Process each update received from the server
                 data.forEach(update => {
                     if (update.type === 'newListing') {
                         addListing(update.listing);
@@ -25,7 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, POLLING_INTERVAL);
     }
 
-    // Start polling the server for updates
+    // Start by loading initial listings and then polling for updates
+    loadInitialListings();
     pollServerForUpdates();
 
     // Function to add a new listing to the DOM
@@ -47,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         listingsContainer.appendChild(listingDiv);
 
+        // Click event for viewing listing details
         listingDiv.querySelector('.clickable-listing').addEventListener('click', (event) => {
             if (!event.target.classList.contains('btn-bid')) {
                 localStorage.setItem('selectedListing', JSON.stringify(listing));
@@ -54,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Click event for bidding
         listingDiv.querySelector('.btn-bid').addEventListener('click', (event) => {
             event.stopPropagation();
             const bidAmount = prompt('Enter your bid amount:');
@@ -75,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Function to update bid information
+    // Function to update bid information in the DOM
     function updateBid(data) {
         const listingCard = document.querySelector(`.current-bid[data-property="${data.propertyName}"]`);
         if (listingCard) {
