@@ -1,17 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     const listingsContainer = document.getElementById('listings-container');
 
-    // Establish WebSocket connection using the same port as the server
-    const socket = new WebSocket('ws://3.132.82.18:8080');
+    // Establish SSE connection using EventSource
+    const eventSource = new EventSource('/events');
 
-
-
-    socket.onopen = () => {
-        document.getElementById('status').textContent = 'Connected to WebSocket server!';
-        console.log('WebSocket connection established.');
+    eventSource.onopen = () => {
+        document.getElementById('status').textContent = 'Connected to SSE server!';
+        console.log('SSE connection established.');
     };
 
-    socket.onmessage = (event) => {
+    eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'newListing') {
             console.log('New listing received:', data.listing);
@@ -25,14 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        document.getElementById('status').textContent = 'Failed to connect to WebSocket server.';
-    };
-
-    socket.onclose = () => {
-        document.getElementById('status').textContent = 'Disconnected from WebSocket server.';
-        console.log('WebSocket connection closed.');
+    eventSource.onerror = (error) => {
+        console.error('SSE error:', error);
+        document.getElementById('status').textContent = 'Failed to connect to SSE server.';
     };
 
     // Function to add a new listing to the DOM
@@ -67,14 +60,17 @@ document.addEventListener('DOMContentLoaded', () => {
             event.stopPropagation(); // Prevent the navigation when clicking "Bid Now"
             const bidAmount = prompt('Enter your bid amount:');
             if (bidAmount && !isNaN(bidAmount) && parseFloat(bidAmount) > listing.currentBid) {
-                // Update the current bid and send to WebSocket server
                 listing.currentBid = parseFloat(bidAmount);
-                socket.send(JSON.stringify({
-                    type: 'newBid',
-                    propertyName: listing.propertyName,
-                    bidAmount: listing.currentBid
-                }));
-                updateBid({ propertyName: listing.propertyName, bidAmount: listing.currentBid });
+                fetch('/newBid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        propertyName: listing.propertyName,
+                        bidAmount: listing.currentBid
+                    })
+                }).then(response => response.json())
+                  .then(data => updateBid(data))
+                  .catch(error => console.error('Error posting bid:', error));
             } else {
                 alert('Please enter a valid bid amount greater than the current bid.');
             }
@@ -88,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
             listingCard.textContent = `Current Bid: $${data.bidAmount}`;
         }
 
-        // Update the listing in localStorage if on the detail page
         const listing = JSON.parse(localStorage.getItem('selectedListing'));
         if (listing && listing.propertyName === data.propertyName) {
             listing.currentBid = data.bidAmount;

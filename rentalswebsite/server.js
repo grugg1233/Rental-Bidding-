@@ -1,14 +1,13 @@
-// server.js - Updated with Listings Persistence
 const express = require('express');
 const http = require('http');
-const WebSocket = require('ws');
 const path = require('path');
 
 const app = express();
 const PORT = 8080;
 
-// Create HTTP server
-const server = http.createServer(app);
+// In-memory array to store listings
+const listings = [];
+let clients = [];
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));
@@ -26,67 +25,44 @@ app.get('/contact', (req, res) => {
     res.send('<h1>Contact Us</h1><p>Please contact us at contact@rentalbids.com.</p>');
 });
 
-// In-memory array to store listings
-const listings = [];
+// SSE endpoint to send data to clients
+app.get('/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
 
-// WebSocket server integrated with HTTP server
-const wss = new WebSocket.Server({ server });
+    res.write(`data: ${JSON.stringify({ type: 'existingListings', listings })}\\n\\n`);
+    clients.push(res);
 
-wss.on('connection', (ws) => {
-    console.log('New client connected');
-
-    // Send existing listings to newly connected client
-    if (listings.length > 0) {
-        ws.send(JSON.stringify({ type: 'existingListings', listings }));
-    }
-
-    ws.on('message', (message) => {
-        try {
-            const data = JSON.parse(message);
-            if (data.type === 'newListing') {
-                const listing = data.listing;
-                listings.push(listing); // Store the new listing
-                console.log('New listing created:', listing);
-
-                // Broadcast new listing to all clients
-                wss.clients.forEach(client => {
-                    if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({
-                            type: 'newListing',
-                            listing: listing
-                        }));
-                    }
-                });
-            } else if (data.type === 'newBid') {
-                console.log('Received bid:', data);
-                const listing = listings.find(l => l.propertyName === data.propertyName);
-                if (listing) {
-                    listing.currentBid = data.bidAmount; // Update current bid
-
-                    // Broadcast updated bid to all clients
-                    wss.clients.forEach(client => {
-                        if (client.readyState === WebSocket.OPEN) {
-                            client.send(JSON.stringify({
-                                type: 'newBid',
-                                propertyName: listing.propertyName,
-                                bidAmount: listing.currentBid
-                            }));
-                        }
-                    });
-                }
-            }
-        } catch (e) {
-            console.error('Invalid message format:', message);
-            ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format.' }));
-        }
-    });
-
-    ws.on('close', () => {
-        console.log('Client disconnected');
+    req.on('close', () => {
+        clients = clients.filter(client => client !== res);
     });
 });
 
-// Start HTTP and WebSocket server
-server.listen(PORT, () => {
+// Endpoint to handle new bids
+app.post('/newBid', express.json(), (req, res) => {
+    const { propertyName, bidAmount } = req.body;
+    const listing = listings.find(l => l.propertyName === propertyName);
+
+    if (listing && bidAmount > listing.currentBid) {
+        listing.currentBid = bidAmount;
+
+        clients.forEach(client => {
+            client.write(`data: ${JSON.stringify({
+                type: 'newBid',
+                propertyName,
+                bidAmount
+            })}\\n\\n`);
+        });
+
+        res.json({ success: true, propertyName, bidAmount });
+    } else {
+        res.status(400).json({ success: false, message: 'Invalid bid.' });
+    }
+});
+
+// Start HTTP server
+app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
