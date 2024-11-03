@@ -1,9 +1,16 @@
 const express = require('express');
-const http = require('http');
+const https = require('https');  // Changed from `http` to `https`
+const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 8080;
+const PORT = 443;  // Updated to use HTTPS port 443
+
+// Load SSL Certificates - Replace with the actual path to your SSL certificate and private key
+const options = {
+    key: fs.readFileSync('/path/to/your_private_key.pem'),  // Update this line
+    cert: fs.readFileSync('/path/to/your_certificate.pem')  // Update this line
+};
 
 // In-memory array to store listings
 const listings = [];
@@ -21,10 +28,6 @@ app.get('/create-listing', (req, res) => {
     res.sendFile(path.join(__dirname, 'post_listing.html'));
 });
 
-app.get('/contact', (req, res) => {
-    res.send('<h1>Contact Us</h1><p>Please contact us at contact@rentalbids.com.</p>');
-});
-
 // SSE endpoint to send data to clients
 app.get('/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -32,7 +35,7 @@ app.get('/events', (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
 
-    res.write(`data: ${JSON.stringify({ type: 'existingListings', listings })}\\n\\n`);
+    res.write(`data: ${JSON.stringify({ type: 'existingListings', listings })}\n\n`);
     clients.push(res);
 
     req.on('close', () => {
@@ -53,7 +56,7 @@ app.post('/newBid', express.json(), (req, res) => {
                 type: 'newBid',
                 propertyName,
                 bidAmount
-            })}\\n\\n`);
+            })}\n\n`);
         });
 
         res.json({ success: true, propertyName, bidAmount });
@@ -62,7 +65,7 @@ app.post('/newBid', express.json(), (req, res) => {
     }
 });
 
-// Start HTTP server
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+// Start HTTPS server with SSL options
+https.createServer(options, app).listen(PORT, () => {
+    console.log(`Secure server is running on https://localhost:${PORT}`);
 });
