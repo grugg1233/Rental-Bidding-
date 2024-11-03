@@ -1,32 +1,32 @@
 document.addEventListener('DOMContentLoaded', () => {
     const listingsContainer = document.getElementById('listings-container');
 
-    // Establish SSE connection using EventSource
-    const eventSource = new EventSource('/events');
+    // Polling interval in milliseconds (e.g., 5000 ms = 5 seconds)
+    const POLLING_INTERVAL = 5000;
 
-    eventSource.onopen = () => {
-        document.getElementById('status').textContent = 'Connected to SSE server!';
-        console.log('SSE connection established.');
-    };
+    // Function to poll the server for updates every few seconds
+    function pollServerForUpdates() {
+        setInterval(async () => {
+            try {
+                const response = await fetch('/get-updates');  // AJAX call to check for updates
+                const data = await response.json();
 
-    eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'newListing') {
-            console.log('New listing received:', data.listing);
-            addListing(data.listing);
-        } else if (data.type === 'newBid') {
-            console.log('New bid received:', data);
-            updateBid(data);
-        } else if (data.type === 'existingListings') {
-            console.log('Existing listings received:', data.listings);
-            data.listings.forEach(listing => addListing(listing));
-        }
-    };
+                // Process each update received from the server
+                data.forEach(update => {
+                    if (update.type === 'newListing') {
+                        addListing(update.listing);
+                    } else if (update.type === 'newBid') {
+                        updateBid(update);
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching updates:', error);
+            }
+        }, POLLING_INTERVAL);
+    }
 
-    eventSource.onerror = (error) => {
-        console.error('SSE error:', error);
-        document.getElementById('status').textContent = 'Failed to connect to SSE server.';
-    };
+    // Start polling the server for updates
+    pollServerForUpdates();
 
     // Function to add a new listing to the DOM
     function addListing(listing) {
@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         listingsContainer.appendChild(listingDiv);
 
-        // Add event listener to the card (except the "Bid Now" button) to navigate to detailed view
         listingDiv.querySelector('.clickable-listing').addEventListener('click', (event) => {
             if (!event.target.classList.contains('btn-bid')) {
                 localStorage.setItem('selectedListing', JSON.stringify(listing));
@@ -55,9 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Add event listener to the "Bid Now" button
         listingDiv.querySelector('.btn-bid').addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevent the navigation when clicking "Bid Now"
+            event.stopPropagation();
             const bidAmount = prompt('Enter your bid amount:');
             if (bidAmount && !isNaN(bidAmount) && parseFloat(bidAmount) > listing.currentBid) {
                 listing.currentBid = parseFloat(bidAmount);

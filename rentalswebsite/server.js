@@ -1,20 +1,12 @@
 const express = require('express');
-const https = require('https');  // Changed from `http` to `https`
-const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 443;  // Updated to use HTTPS port 443
-
-// Load SSL Certificates - Replace with the actual path to your SSL certificate and private key
-const options = {
-    key: fs.readFileSync('/path/to/your_private_key.pem'),  // Update this line
-    cert: fs.readFileSync('/path/to/your_certificate.pem')  // Update this line
-};
+const PORT = 8080;  // HTTP port for polling
 
 // In-memory array to store listings
 const listings = [];
-let clients = [];
+let recentUpdates = [];
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));
@@ -28,19 +20,10 @@ app.get('/create-listing', (req, res) => {
     res.sendFile(path.join(__dirname, 'post_listing.html'));
 });
 
-// SSE endpoint to send data to clients
-app.get('/events', (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
-
-    res.write(`data: ${JSON.stringify({ type: 'existingListings', listings })}\n\n`);
-    clients.push(res);
-
-    req.on('close', () => {
-        clients = clients.filter(client => client !== res);
-    });
+// New endpoint to handle polling requests for updates
+app.get('/get-updates', (req, res) => {
+    res.json(recentUpdates);
+    recentUpdates = [];  // Clear updates after sending
 });
 
 // Endpoint to handle new bids
@@ -51,12 +34,11 @@ app.post('/newBid', express.json(), (req, res) => {
     if (listing && bidAmount > listing.currentBid) {
         listing.currentBid = bidAmount;
 
-        clients.forEach(client => {
-            client.write(`data: ${JSON.stringify({
-                type: 'newBid',
-                propertyName,
-                bidAmount
-            })}\n\n`);
+        // Store bid update in recentUpdates to be sent to clients on next poll
+        recentUpdates.push({
+            type: 'newBid',
+            propertyName,
+            bidAmount
         });
 
         res.json({ success: true, propertyName, bidAmount });
@@ -65,7 +47,21 @@ app.post('/newBid', express.json(), (req, res) => {
     }
 });
 
-// Start HTTPS server with SSL options
-https.createServer(options, app).listen(PORT, () => {
-    console.log(`Secure server is running on https://localhost:${PORT}`);
+// Add an endpoint to create new listings
+app.post('/add-listing', express.json(), (req, res) => {
+    const listing = req.body;
+    listings.push(listing);
+
+    // Store listing update in recentUpdates to be sent to clients on next poll
+    recentUpdates.push({
+        type: 'newListing',
+        listing
+    });
+
+    res.json({ success: true, listing });
+});
+
+// Start HTTP server
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
