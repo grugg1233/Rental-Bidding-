@@ -2,7 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const listingsContainer = document.getElementById('listings-container');
 
     // Establish WebSocket connection using the same port as the server
-    const socket = new WebSocket('ws://<your-public-ip>:8080');
+    const socket = new WebSocket('ws://3.132.82.18:8080');
+
 
 
     socket.onopen = () => {
